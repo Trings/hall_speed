@@ -21,6 +21,7 @@ MODULE_DESCRIPTION("Driver for hall speed sensor driver");
 
 static int gpio_irq = -1;
 static ktime_t t1, t2;
+static unsigned int stop_time = -1;
 static struct timer_list stop_timer;
 
 static uint wheel_diameter = 6;
@@ -33,11 +34,11 @@ MODULE_PARM_DESC(mugnet_number, "Number of magnets on wheel");
 
 static uint min_speed = 5;
 module_param(min_speed, uint, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
-MODULE_PARM_DESC(stop_time, "Minimun speed in cm/s");
+MODULE_PARM_DESC(min_speed, "Minimun speed in cm/s");
  
 /* Write in /sys/class/hall_speed/value */
 static ssize_t hall_speed_value_write(struct class *class, const char *buf,
-	size_t len) 
+	size_t len)
 {
 	return len;
 }
@@ -74,13 +75,12 @@ static struct class hall_speed_class = {
 /* Interrupt handler on HALL DO signal */
 static irqreturn_t gpio_isr(int irq, void *data)
 {
+	/* When magnet goes past sensor the last one sets its DO to 0 */	
 	if (!gpio_get_value(HALL_DO)) {
 		t1 = t2;
 		t2 = ktime_get();
 
-		mod_timer(&stop_timer, jiffies + msecs_to_jiffies(PI *
-			MSEC_PER_SEC * wheel_diameter / PI_COEFFICIENT /
-			magnet_number / min_speed));
+		mod_timer(&stop_timer, jiffies + msecs_to_jiffies(stop_time));
 	}
 
 	return IRQ_HANDLED;
@@ -139,22 +139,26 @@ static int hall_speed_init(void)
 		printk(KERN_INFO HALL_SPEED_DRIVER "failed to get GPIO IRQ, "
 			" %d\n", ret);
 		goto fail_gpio_setup;
-	} else {
+	} else
 		gpio_irq = ret;
-	}
 
 	ret = request_irq(gpio_irq, gpio_isr, IRQF_TRIGGER_FALLING |
-		IRQF_TRIGGER_RISING | IRQF_DISABLED , "hall.do", NULL);
+		IRQF_TRIGGER_RISING | IRQF_DISABLED, "hall.do", NULL);
 	if(ret) {
 		printk(KERN_ERR HALL_SPEED_DRIVER "failed to request IRQ, ret "
 			"%d\n", ret);
 		goto fail_gpio_setup;
 	}
 
+	/* If there wasn't signal from hall sensor during stop_time then wheel
+	 * has been stopped and we need set speed value to 0. stop_time
+	 * is calculated from minimal speed parameter. The higher minimal speed,
+	 * the lower stop detection time.
+	 */
+	stop_time = PI * MSEC_PER_SEC * wheel_diameter / PI_COEFFICIENT /
+		magnet_number /	min_speed;
 	setup_timer(&stop_timer, stop_timer_callback, 0);
-	ret = mod_timer(&stop_timer, jiffies + msecs_to_jiffies(PI *
-		MSEC_PER_SEC * wheel_diameter / PI_COEFFICIENT / magnet_number /
-		min_speed));
+	ret = mod_timer(&stop_timer, jiffies + msecs_to_jiffies(stop_time));
 	if (ret) {
 		printk(KERN_ERR HALL_SPEED_DRIVER "failed to setup stop timer "
 			"%d\n", ret);
