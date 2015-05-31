@@ -30,7 +30,7 @@ MODULE_PARM_DESC(wheel_diameter, "Wheel diameter in cm");
 
 static uint magnet_number = 2;
 module_param(magnet_number, uint, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
-MODULE_PARM_DESC(mugnet_number, "Number of magnets on wheel");
+MODULE_PARM_DESC(magnet_number, "Number of magnets on wheel");
 
 static uint min_speed = 5;
 module_param(min_speed, uint, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
