@@ -13,7 +13,7 @@ MODULE_DESCRIPTION("Driver for hall speed sensor driver");
 
 #define HALL_SPEED_DRIVER "Hall speed driver: "
 
-/* Change thise line to use different GPIOs */
+/* Change this line to use different GPIO */
 #define HALL_DO	40 /* J11.9 -   PA8 */
 
 #define PI 314
