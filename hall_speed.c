@@ -23,6 +23,7 @@ static int gpio_irq = -1;
 static ktime_t t1, t2;
 static unsigned int stop_time = -1;
 static struct timer_list stop_timer;
+static spinlock_t lock;
 
 static uint wheel_diameter = 6;
 module_param(wheel_diameter, uint, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
@@ -46,9 +47,16 @@ static ssize_t hall_speed_value_write(struct class *class, const char *buf,
 /* Read from /sys/class/hall_speed/value */
 static ssize_t hall_speed_value_read(struct class *class, char *buf)
 {
+	unsigned long flags;
+	u32 t_diff;
 	u32 speed = 0;
-	u32 t_diff = ktime_to_ns(t1) && ktime_to_ns(t2) ?
+
+	spin_lock_irqsave(&lock, flags);
+
+	t_diff = ktime_to_ns(t1) && ktime_to_ns(t2) ?
 		ktime_to_us(ktime_sub(t2, t1)) : 0;
+
+	spin_unlock_irqrestore(&lock, flags);
 
 	if (t_diff) {
 		speed = PI * wheel_diameter * USEC_PER_SEC / PI_COEFFICIENT /
@@ -88,9 +96,12 @@ static irqreturn_t gpio_isr(int irq, void *data)
 
 void stop_timer_callback(unsigned long data)
 {
+	unsigned long flags;
 	static const ktime_t ktime_zero;
 
+	spin_lock_irqsave(&lock, flags);
 	t1 = t2 = ktime_zero;
+	spin_unlock_irqrestore(&lock, flags);
 }
 
 static int hall_speed_init(void)
@@ -116,6 +127,8 @@ static int hall_speed_init(void)
 			"speed \n");
 		return -1;
 	}
+
+	spin_lock_init(&lock);
 
 	if (class_register(&hall_speed_class) < 0)
 		return -1;
