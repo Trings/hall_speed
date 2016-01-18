@@ -10,7 +10,7 @@
 #define DRIVER_PREFIX DRIVER_NAME ": "
 
 /* Change this line to use different GPIO */
-#define HALL_DO	40 /* J11.9 -   PA8 */
+#define HALL_DO_GPIO_NUM 40 /* J11.9 -   PA8 */
 
 #define PI 314
 #define PI_COEFFICIENT 100
@@ -32,6 +32,11 @@ MODULE_PARM_DESC(magnet_number, "Number of magnets on wheel");
 static uint min_speed = 5;
 module_param(min_speed, uint, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
 MODULE_PARM_DESC(min_speed, "Minimun speed in cm/s");
+
+static uint hall_do_gpio_num = HALL_DO_GPIO_NUM;
+module_param(hall_do_gpio_num, uint, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
+MODULE_PARM_DESC(hall_do_gpio_num, "GPIO number to which Hall sensor digital "
+	"output is connected");
  
 /* Write in /sys/class/hall_speed/value */
 static ssize_t hall_speed_value_write(struct class *class, const char *buf,
@@ -80,7 +85,7 @@ static struct class hall_speed_class = {
 static irqreturn_t gpio_isr(int irq, void *data)
 {
 	/* When magnet goes past sensor the last one sets its DO to 0 */	
-	if (!gpio_get_value(HALL_DO)) {
+	if (!gpio_get_value(hall_do_gpio_num)) {
 		t1 = t2;
 		t2 = ktime_get();
 
@@ -127,21 +132,21 @@ static int hall_speed_init(void)
 	if (class_register(&hall_speed_class) < 0)
 		return -1;
 
-	ret = gpio_request(HALL_DO, "HALL_DO");
+	ret = gpio_request(hall_do_gpio_num, "HALL_DO");
 	if (ret) {
 		printk(KERN_ERR DRIVER_PREFIX "failed to request GPIO, ret"
 			" %d\n", ret);
 		goto fail_gpio_req;
 	}
 
-	ret = gpio_direction_input(HALL_DO);
+	ret = gpio_direction_input(hall_do_gpio_num);
 	if (ret) {
 		printk(KERN_ERR DRIVER_PREFIX "failed to set GPIO "
 			"direction, ret %d\n", ret);
 		goto fail_gpio_setup;
 	}
 
-	ret = gpio_to_irq(HALL_DO);
+	ret = gpio_to_irq(hall_do_gpio_num);
 	if (ret < 0) {
 		printk(KERN_ERR DRIVER_PREFIX "failed to get GPIO IRQ, "
 			" %d\n", ret);
@@ -177,7 +182,7 @@ static int hall_speed_init(void)
 fail_timer_setup:
 	free_irq(gpio_irq, NULL);
 fail_gpio_setup:
-	gpio_free(HALL_DO);
+	gpio_free(hall_do_gpio_num);
 fail_gpio_req:
 	class_unregister(&hall_speed_class);
 	return -1;
@@ -187,7 +192,7 @@ static void hall_speed_exit(void)
 {
 	del_timer(&stop_timer);
 	free_irq(gpio_irq, NULL);
-	gpio_free(HALL_DO);
+	gpio_free(hall_do_gpio_num);
 	class_unregister(&hall_speed_class);
 }
  
