@@ -107,19 +107,19 @@ static int hall_speed_init(void)
 	printk(KERN_INFO DRIVER_PREFIX "initializing.\n");
 
 	if (!wheel_diameter) {
-		printk(KERN_INFO DRIVER_PREFIX "wrong value of wheel "
+		printk(KERN_ERR DRIVER_PREFIX "wrong value of wheel "
 			"diameter\n");
 		return -1;
 	}
 
 	if (!magnet_number) {
-		printk(KERN_INFO DRIVER_PREFIX "wrong value of magnets "
+		printk(KERN_ERR DRIVER_PREFIX "wrong value of magnets "
 			"number\n");
 		return -1;
 	}
 
 	if (!min_speed) {
-		printk(KERN_INFO DRIVER_PREFIX "wrong value of minimum "
+		printk(KERN_ERR DRIVER_PREFIX "wrong value of minimum "
 			"speed \n");
 		return -1;
 	}
@@ -131,21 +131,21 @@ static int hall_speed_init(void)
 
 	ret = gpio_request(HALL_DO, "HALL_DO");
 	if (ret) {
-		printk(KERN_INFO DRIVER_PREFIX "failed to request GPIO, ret"
+		printk(KERN_ERR DRIVER_PREFIX "failed to request GPIO, ret"
 			" %d\n", ret);
 		goto fail_gpio_req;
 	}
 
 	ret = gpio_direction_input(HALL_DO);
 	if (ret) {
-		printk(KERN_INFO DRIVER_PREFIX "failed to set GPIO "
+		printk(KERN_ERR DRIVER_PREFIX "failed to set GPIO "
 			"direction, ret %d\n", ret);
 		goto fail_gpio_setup;
 	}
 
 	ret = gpio_to_irq(HALL_DO);
 	if (ret < 0) {
-		printk(KERN_INFO DRIVER_PREFIX "failed to get GPIO IRQ, "
+		printk(KERN_ERR DRIVER_PREFIX "failed to get GPIO IRQ, "
 			" %d\n", ret);
 		goto fail_gpio_setup;
 	} else
