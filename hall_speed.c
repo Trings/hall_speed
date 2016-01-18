@@ -9,6 +9,10 @@
 #define DRIVER_NAME "halls"
 #define DRIVER_PREFIX DRIVER_NAME ": "
 
+#define WHEEL_DIAMETER 6
+#define MAGNET_NUMBER 2
+#define MIN_SPEED 5
+
 /* Change this line to use different GPIO */
 #define HALL_DO_GPIO_NUM 40 /* J11.9 -   PA8 */
 
@@ -21,15 +25,15 @@ static unsigned int stop_time = -1;
 static struct timer_list stop_timer;
 static spinlock_t lock;
 
-static uint wheel_diameter = 6;
+static uint wheel_diameter = WHEEL_DIAMETER;
 module_param(wheel_diameter, uint, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
 MODULE_PARM_DESC(wheel_diameter, "Wheel diameter in cm");
 
-static uint magnet_number = 2;
+static uint magnet_number = MAGNET_NUMBER;
 module_param(magnet_number, uint, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
 MODULE_PARM_DESC(magnet_number, "Number of magnets on wheel");
 
-static uint min_speed = 5;
+static uint min_speed = MIN_SPEED;
 module_param(min_speed, uint, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
 MODULE_PARM_DESC(min_speed, "Minimun speed in cm/s");
 
