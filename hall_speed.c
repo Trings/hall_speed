@@ -104,8 +104,6 @@ static int hall_speed_init(void)
 {
 	int ret;
 
-	printk(KERN_INFO DRIVER_PREFIX "initializing.\n");
-
 	if (!wheel_diameter) {
 		printk(KERN_ERR DRIVER_PREFIX "wrong value of wheel "
 			"diameter\n");
@@ -191,8 +189,6 @@ static void hall_speed_exit(void)
 	free_irq(gpio_irq, NULL);
 	gpio_free(HALL_DO);
 	class_unregister(&hall_speed_class);
-
-	printk(KERN_INFO "Hall speed driver exit.\n");
 }
  
 module_init(hall_speed_init);
