@@ -196,4 +196,4 @@ module_exit(hall_speed_exit);
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Bogdan Bogush");
-MODULE_DESCRIPTION("Speed calculation driver for Hall sensor");
+MODULE_DESCRIPTION("Hall effect speed sensor driver");
