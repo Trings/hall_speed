@@ -1,8 +1,7 @@
-#include <linux/init.h>
 #include <linux/module.h>
+#include <linux/moduleparam.h>
 #include <linux/gpio.h>
 #include <linux/kernel.h>
-#include <linux/moduleparam.h>
 #include <linux/ktime.h>
 #include <linux/device.h>
 #include <linux/interrupt.h> 
