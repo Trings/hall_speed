@@ -6,7 +6,8 @@
 #include <linux/device.h>
 #include <linux/interrupt.h> 
 
-#define HALL_SPEED_DRIVER "Hall speed driver: "
+#define DRIVER_NAME "halls"
+#define DRIVER_PREFIX DRIVER_NAME ": "
 
 /* Change this line to use different GPIO */
 #define HALL_DO	40 /* J11.9 -   PA8 */
@@ -103,22 +104,22 @@ static int hall_speed_init(void)
 {
 	int ret;
 
-	printk(KERN_INFO HALL_SPEED_DRIVER "initializing.\n");
+	printk(KERN_INFO DRIVER_PREFIX "initializing.\n");
 
 	if (!wheel_diameter) {
-		printk(KERN_INFO HALL_SPEED_DRIVER "wrong value of wheel "
+		printk(KERN_INFO DRIVER_PREFIX "wrong value of wheel "
 			"diameter\n");
 		return -1;
 	}
 
 	if (!magnet_number) {
-		printk(KERN_INFO HALL_SPEED_DRIVER "wrong value of magnets "
+		printk(KERN_INFO DRIVER_PREFIX "wrong value of magnets "
 			"number\n");
 		return -1;
 	}
 
 	if (!min_speed) {
-		printk(KERN_INFO HALL_SPEED_DRIVER "wrong value of minimum "
+		printk(KERN_INFO DRIVER_PREFIX "wrong value of minimum "
 			"speed \n");
 		return -1;
 	}
@@ -130,21 +131,21 @@ static int hall_speed_init(void)
 
 	ret = gpio_request(HALL_DO, "HALL_DO");
 	if (ret) {
-		printk(KERN_INFO HALL_SPEED_DRIVER "failed to request GPIO, ret"
+		printk(KERN_INFO DRIVER_PREFIX "failed to request GPIO, ret"
 			" %d\n", ret);
 		goto fail_gpio_req;
 	}
 
 	ret = gpio_direction_input(HALL_DO);
 	if (ret) {
-		printk(KERN_INFO HALL_SPEED_DRIVER "failed to set GPIO "
+		printk(KERN_INFO DRIVER_PREFIX "failed to set GPIO "
 			"direction, ret %d\n", ret);
 		goto fail_gpio_setup;
 	}
 
 	ret = gpio_to_irq(HALL_DO);
 	if (ret < 0) {
-		printk(KERN_INFO HALL_SPEED_DRIVER "failed to get GPIO IRQ, "
+		printk(KERN_INFO DRIVER_PREFIX "failed to get GPIO IRQ, "
 			" %d\n", ret);
 		goto fail_gpio_setup;
 	} else
@@ -153,7 +154,7 @@ static int hall_speed_init(void)
 	ret = request_irq(gpio_irq, gpio_isr, IRQF_TRIGGER_FALLING |
 		IRQF_TRIGGER_RISING | IRQF_DISABLED, "hall.do", NULL);
 	if(ret) {
-		printk(KERN_ERR HALL_SPEED_DRIVER "failed to request IRQ, ret "
+		printk(KERN_ERR DRIVER_PREFIX "failed to request IRQ, ret "
 			"%d\n", ret);
 		goto fail_gpio_setup;
 	}
@@ -168,7 +169,7 @@ static int hall_speed_init(void)
 	setup_timer(&stop_timer, stop_timer_callback, 0);
 	ret = mod_timer(&stop_timer, jiffies + msecs_to_jiffies(stop_time));
 	if (ret) {
-		printk(KERN_ERR HALL_SPEED_DRIVER "failed to setup stop timer "
+		printk(KERN_ERR DRIVER_PREFIX "failed to setup stop timer "
 			"%d\n", ret);
 		goto fail_timer_setup;
 	}
