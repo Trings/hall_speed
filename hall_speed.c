@@ -7,10 +7,6 @@
 #include <linux/device.h>
 #include <linux/interrupt.h> 
 
-MODULE_LICENSE("GPL");
-MODULE_AUTHOR("Bogdan Bogush");
-MODULE_DESCRIPTION("Driver for hall speed sensor driver");
-
 #define HALL_SPEED_DRIVER "Hall speed driver: "
 
 /* Change this line to use different GPIO */
@@ -201,3 +197,7 @@ static void hall_speed_exit(void)
  
 module_init(hall_speed_init);
 module_exit(hall_speed_exit);
+
+MODULE_LICENSE("GPL");
+MODULE_AUTHOR("Bogdan Bogush");
+MODULE_DESCRIPTION("Speed calculation driver for Hall sensor");
