@@ -57,6 +57,12 @@ static inline u32 get_speed(u32 t_diff)
 	return PI * wheel_diameter * USEC_PER_SEC / PI_COEFFICIENT /
 		magnet_number / t_diff;
 }
+
+static inline u32 get_stop_detection_time(u32 min_speed)
+{
+	return PI * MSEC_PER_SEC * wheel_diameter / PI_COEFFICIENT /
+		magnet_number /	min_speed;
+}
  
 static ssize_t speed_value_read(struct class *class, char *buf)
 {
@@ -178,8 +184,7 @@ static int hall_speed_init(void)
 	 * is calculated from minimal speed parameter. The higher minimal speed,
 	 * the lower stop detection time.
 	 */
-	halls.stop_time = PI * MSEC_PER_SEC * wheel_diameter / PI_COEFFICIENT /
-		magnet_number /	min_speed;
+	halls.stop_time = get_stop_detection_time(min_speed);
 	setup_timer(&halls.stop_timer, stop_timer_callback,
 		(unsigned long)&halls);
 	ret = mod_timer(&halls.stop_timer, jiffies +
