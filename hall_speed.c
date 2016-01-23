@@ -98,10 +98,11 @@ void stop_timer_callback(unsigned long data)
 {
 	unsigned long flags;
 	static const ktime_t ktime_zero;
+	struct halls *hs = (struct halls *)data;
 
-	spin_lock_irqsave(&halls.lock, flags);
-	halls.t1 = halls.t2 = ktime_zero;
-	spin_unlock_irqrestore(&halls.lock, flags);
+	spin_lock_irqsave(&hs->lock, flags);
+	hs->t1 = hs->t2 = ktime_zero;
+	spin_unlock_irqrestore(&hs->lock, flags);
 }
 
 static int hall_speed_init(void)
@@ -173,7 +174,8 @@ static int hall_speed_init(void)
 	 */
 	halls.stop_time = PI * MSEC_PER_SEC * wheel_diameter / PI_COEFFICIENT /
 		magnet_number /	min_speed;
-	setup_timer(&halls.stop_timer, stop_timer_callback, 0);
+	setup_timer(&halls.stop_timer, stop_timer_callback,
+		(unsigned long)&halls);
 	ret = mod_timer(&halls.stop_timer, jiffies +
 		msecs_to_jiffies(halls.stop_time));
 	if (ret) {
