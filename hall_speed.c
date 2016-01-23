@@ -70,7 +70,7 @@ static ssize_t speed_value_read(struct class *class, char *buf)
 }
 
 static struct class_attribute halls_class_attrs[] = {
-	__ATTR(value, S_IRUGO | S_IWUSR, speed_value_read, NULL),
+	__ATTR(value, S_IRUGO, speed_value_read, NULL),
 	__ATTR_NULL,
 };
 
