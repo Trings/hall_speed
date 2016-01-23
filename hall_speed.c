@@ -13,9 +13,11 @@
 #define MAGNET_NUMBER 2
 #define MIN_SPEED 5
 
-/* Change this line to use different GPIO */
-/* DO from sensor point of view */
-#define HALL_DO_GPIO_NUM 40 /* 32 (PA0) + 8 (PA8) (J11.9 AT91SAM9G45-EKES) */
+/* Change this line to use different GPIO number
+ * 32 (PA0) + 8 (PA8) (J11.9 AT91SAM9G45-EKES)
+ * DO from sensor point of view
+ */
+#define HALL_DO_GPIO_NUM 40
 #define HALL_DO_GPIO_NAME "halls_do"
 
 #define PI 314
