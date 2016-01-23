@@ -38,7 +38,7 @@ MODULE_PARM_DESC(hall_do_gpio_num, "GPIO number to which Hall sensor digital "
 
 struct halls {
 	uint do_gpio_num;
-	int gpio_irq;
+	int do_gpio_irq;
 	ktime_t t1, t2;
 	unsigned int stop_time;
 	struct timer_list stop_timer;
@@ -153,10 +153,11 @@ static int hall_speed_init(void)
 			" %d\n", ret);
 		goto fail_gpio_setup;
 	} else
-		halls.gpio_irq = ret;
+		halls.do_gpio_irq = ret;
 
-	ret = request_irq(halls.gpio_irq, halls_do_isr, IRQF_TRIGGER_FALLING |
-		IRQF_TRIGGER_RISING | IRQF_DISABLED, "hall.do", &halls);
+	ret = request_irq(halls.do_gpio_irq, halls_do_isr,
+		IRQF_TRIGGER_FALLING | IRQF_TRIGGER_RISING | IRQF_DISABLED,
+		"hall.do", &halls);
 	if(ret) {
 		printk(KERN_ERR DRIVER_PREFIX "failed to request IRQ, ret "
 			"%d\n", ret);
@@ -182,7 +183,7 @@ static int hall_speed_init(void)
 	return 0;
 
 fail_timer_setup:
-	free_irq(halls.gpio_irq, NULL);
+	free_irq(halls.do_gpio_irq, NULL);
 fail_gpio_setup:
 	gpio_free(halls.do_gpio_num);
 fail_gpio_req:
@@ -193,7 +194,7 @@ fail_gpio_req:
 static void hall_speed_exit(void)
 {
 	del_timer(&halls.stop_timer);
-	free_irq(halls.gpio_irq, NULL);
+	free_irq(halls.do_gpio_irq, NULL);
 	gpio_free(halls.do_gpio_num);
 	class_unregister(&halls.class);
 }
