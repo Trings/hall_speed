@@ -19,12 +19,6 @@
 #define PI 314
 #define PI_COEFFICIENT 100
 
-static int gpio_irq = -1;
-static ktime_t t1, t2;
-static unsigned int stop_time = -1;
-static struct timer_list stop_timer;
-static spinlock_t lock;
-
 static uint wheel_diameter = WHEEL_DIAMETER;
 module_param(wheel_diameter, uint, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
 MODULE_PARM_DESC(wheel_diameter, "Wheel diameter in cm");
@@ -41,6 +35,16 @@ static uint hall_do_gpio_num = HALL_DO_GPIO_NUM;
 module_param(hall_do_gpio_num, uint, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
 MODULE_PARM_DESC(hall_do_gpio_num, "GPIO number to which Hall sensor digital "
 	"output is connected");
+
+struct halls {
+	int gpio_irq;
+	ktime_t t1, t2;
+	unsigned int stop_time;
+	struct timer_list stop_timer;
+	spinlock_t lock;
+};
+
+static struct halls halls;
  
 /* Write in /sys/class/hall_speed/value */
 static ssize_t hall_speed_value_write(struct class *class, const char *buf,
@@ -56,12 +60,12 @@ static ssize_t hall_speed_value_read(struct class *class, char *buf)
 	u32 t_diff;
 	u32 speed = 0;
 
-	spin_lock_irqsave(&lock, flags);
+	spin_lock_irqsave(&halls.lock, flags);
 
-	t_diff = ktime_to_ns(t1) && ktime_to_ns(t2) ?
-		ktime_to_us(ktime_sub(t2, t1)) : 0;
+	t_diff = ktime_to_ns(halls.t1) && ktime_to_ns(halls.t2) ?
+		ktime_to_us(ktime_sub(halls.t2, halls.t1)) : 0;
 
-	spin_unlock_irqrestore(&lock, flags);
+	spin_unlock_irqrestore(&halls.lock, flags);
 
 	if (t_diff) {
 		speed = PI * wheel_diameter * USEC_PER_SEC / PI_COEFFICIENT /
@@ -90,10 +94,11 @@ static irqreturn_t gpio_isr(int irq, void *data)
 {
 	/* When magnet goes past sensor the last one sets its DO to 0 */	
 	if (!gpio_get_value(hall_do_gpio_num)) {
-		t1 = t2;
-		t2 = ktime_get();
+		halls.t1 = halls.t2;
+		halls.t2 = ktime_get();
 
-		mod_timer(&stop_timer, jiffies + msecs_to_jiffies(stop_time));
+		mod_timer(&halls.stop_timer, jiffies +
+			msecs_to_jiffies(halls.stop_time));
 	}
 
 	return IRQ_HANDLED;
@@ -104,9 +109,9 @@ void stop_timer_callback(unsigned long data)
 	unsigned long flags;
 	static const ktime_t ktime_zero;
 
-	spin_lock_irqsave(&lock, flags);
-	t1 = t2 = ktime_zero;
-	spin_unlock_irqrestore(&lock, flags);
+	spin_lock_irqsave(&halls.lock, flags);
+	halls.t1 = halls.t2 = ktime_zero;
+	spin_unlock_irqrestore(&halls.lock, flags);
 }
 
 static int hall_speed_init(void)
@@ -131,7 +136,7 @@ static int hall_speed_init(void)
 		return -1;
 	}
 
-	spin_lock_init(&lock);
+	spin_lock_init(&halls.lock);
 
 	if (class_register(&hall_speed_class) < 0)
 		return -1;
@@ -156,9 +161,9 @@ static int hall_speed_init(void)
 			" %d\n", ret);
 		goto fail_gpio_setup;
 	} else
-		gpio_irq = ret;
+		halls.gpio_irq = ret;
 
-	ret = request_irq(gpio_irq, gpio_isr, IRQF_TRIGGER_FALLING |
+	ret = request_irq(halls.gpio_irq, gpio_isr, IRQF_TRIGGER_FALLING |
 		IRQF_TRIGGER_RISING | IRQF_DISABLED, "hall.do", NULL);
 	if(ret) {
 		printk(KERN_ERR DRIVER_PREFIX "failed to request IRQ, ret "
@@ -171,10 +176,11 @@ static int hall_speed_init(void)
 	 * is calculated from minimal speed parameter. The higher minimal speed,
 	 * the lower stop detection time.
 	 */
-	stop_time = PI * MSEC_PER_SEC * wheel_diameter / PI_COEFFICIENT /
+	halls.stop_time = PI * MSEC_PER_SEC * wheel_diameter / PI_COEFFICIENT /
 		magnet_number /	min_speed;
-	setup_timer(&stop_timer, stop_timer_callback, 0);
-	ret = mod_timer(&stop_timer, jiffies + msecs_to_jiffies(stop_time));
+	setup_timer(&halls.stop_timer, stop_timer_callback, 0);
+	ret = mod_timer(&halls.stop_timer, jiffies +
+		msecs_to_jiffies(halls.stop_time));
 	if (ret) {
 		printk(KERN_ERR DRIVER_PREFIX "failed to setup stop timer "
 			"%d\n", ret);
@@ -184,7 +190,7 @@ static int hall_speed_init(void)
 	return 0;
 
 fail_timer_setup:
-	free_irq(gpio_irq, NULL);
+	free_irq(halls.gpio_irq, NULL);
 fail_gpio_setup:
 	gpio_free(hall_do_gpio_num);
 fail_gpio_req:
@@ -194,8 +200,8 @@ fail_gpio_req:
  
 static void hall_speed_exit(void)
 {
-	del_timer(&stop_timer);
-	free_irq(gpio_irq, NULL);
+	del_timer(&halls.stop_timer);
+	free_irq(halls.gpio_irq, NULL);
 	gpio_free(hall_do_gpio_num);
 	class_unregister(&hall_speed_class);
 }
