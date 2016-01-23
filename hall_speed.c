@@ -11,7 +11,7 @@
 
 #define WHEEL_DIAMETER 6
 #define MAGNET_NUMBER 2
-#define MIN_SPEED 5
+#define MIN_SPEED 20
 
 /* Change this line to use different GPIO number
  * 32 (PA0) + 8 (PA8) (J11.9 AT91SAM9G45-EKES)
