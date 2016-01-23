@@ -140,7 +140,7 @@ static int check_params(void)
 	return 0;
 }
 
-static int hall_speed_init(void)
+static int __init hall_speed_init(void)
 {
 	int ret;
 
@@ -214,7 +214,7 @@ fail_gpio_req:
 	return -1;
 }
  
-static void hall_speed_exit(void)
+static void __exit hall_speed_exit(void)
 {
 	del_timer(&halls.stop_timer);
 	free_irq(halls.do_gpio_irq, &halls);
