@@ -41,6 +41,7 @@ struct halls {
 	ktime_t t1, t2;
 	unsigned int stop_time;
 	struct timer_list stop_timer;
+	struct class class;
 	spinlock_t lock;
 };
 
@@ -52,13 +53,14 @@ static ssize_t hall_speed_value_read(struct class *class, char *buf)
 	unsigned long flags;
 	u32 t_diff;
 	u32 speed = 0;
+	struct halls *hs = container_of(class, struct halls, class);
 
-	spin_lock_irqsave(&halls.lock, flags);
+	spin_lock_irqsave(hs->lock, flags);
 
-	t_diff = ktime_to_ns(halls.t1) && ktime_to_ns(halls.t2) ?
-		ktime_to_us(ktime_sub(halls.t2, halls.t1)) : 0;
+	t_diff = ktime_to_ns(hs->t1) && ktime_to_ns(hs->t2) ?
+		ktime_to_us(ktime_sub(hs->t2, hs->t1)) : 0;
 
-	spin_unlock_irqrestore(&halls.lock, flags);
+	spin_unlock_irqrestore(hs->lock, flags);
 
 	if (t_diff) {
 		speed = PI * wheel_diameter * USEC_PER_SEC / PI_COEFFICIENT /
@@ -72,13 +74,6 @@ static ssize_t hall_speed_value_read(struct class *class, char *buf)
 static struct class_attribute hall_speed_class_attrs[] = {
 	__ATTR(value, S_IRUGO | S_IWUSR, hall_speed_value_read, NULL),
 	__ATTR_NULL,
-};
-
-/* Name of directory created in /sys/class */
-static struct class hall_speed_class = {
-	.name =			"hall_speed",
-	.owner =		THIS_MODULE,
-	.class_attrs =	hall_speed_class_attrs,
 };
 
 /* Interrupt handler on HALL DO signal */
@@ -130,7 +125,10 @@ static int hall_speed_init(void)
 
 	spin_lock_init(&halls.lock);
 
-	if (class_register(&hall_speed_class) < 0)
+	halls.class.name = "hall_speed";
+	halls.class.owner = THIS_MODULE;
+	halls.class.class_attrs = hall_speed_class_attrs;
+	if (class_register(&halls.class) < 0)
 		return -1;
 
 	ret = gpio_request(hall_do_gpio_num, "HALL_DO");
@@ -186,7 +184,7 @@ fail_timer_setup:
 fail_gpio_setup:
 	gpio_free(hall_do_gpio_num);
 fail_gpio_req:
-	class_unregister(&hall_speed_class);
+	class_unregister(&halls.class);
 	return -1;
 }
  
@@ -195,7 +193,7 @@ static void hall_speed_exit(void)
 	del_timer(&halls.stop_timer);
 	free_irq(halls.gpio_irq, NULL);
 	gpio_free(hall_do_gpio_num);
-	class_unregister(&hall_speed_class);
+	class_unregister(&halls.class);
 }
  
 module_init(hall_speed_init);
