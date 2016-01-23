@@ -77,7 +77,7 @@ static struct class_attribute halls_class_attrs[] = {
 	__ATTR_NULL,
 };
 
-/* Interrupt handler on HALL DO signal */
+/* Interrupt handler of hall sensor DO signal */
 static irqreturn_t halls_do_isr(int irq, void *data)
 {
 	struct halls *hs = data;
