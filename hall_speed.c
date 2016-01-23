@@ -46,13 +46,6 @@ struct halls {
 
 static struct halls halls;
  
-/* Write in /sys/class/hall_speed/value */
-static ssize_t hall_speed_value_write(struct class *class, const char *buf,
-	size_t len)
-{
-	return len;
-}
-
 /* Read from /sys/class/hall_speed/value */
 static ssize_t hall_speed_value_read(struct class *class, char *buf)
 {
@@ -77,8 +70,7 @@ static ssize_t hall_speed_value_read(struct class *class, char *buf)
 
 /* Sysfs definitions for hall speed class */
 static struct class_attribute hall_speed_class_attrs[] = {
-	__ATTR(value, S_IRUGO | S_IWUSR, hall_speed_value_read,
-		hall_speed_value_write),
+	__ATTR(value, S_IRUGO | S_IWUSR, hall_speed_value_read, NULL),
 	__ATTR_NULL,
 };
 
