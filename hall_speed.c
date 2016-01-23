@@ -77,13 +77,15 @@ static struct class_attribute halls_class_attrs[] = {
 /* Interrupt handler on HALL DO signal */
 static irqreturn_t gpio_isr(int irq, void *data)
 {
+	struct halls *hs = data;
+
 	/* When magnet goes past sensor the last one sets its DO to 0 */	
 	if (!gpio_get_value(hall_do_gpio_num)) {
-		halls.t1 = halls.t2;
-		halls.t2 = ktime_get();
+		hs->t1 = hs->t2;
+		hs->t2 = ktime_get();
 
-		mod_timer(&halls.stop_timer, jiffies +
-			msecs_to_jiffies(halls.stop_time));
+		mod_timer(&hs->stop_timer, jiffies +
+			msecs_to_jiffies(hs->stop_time));
 	}
 
 	return IRQ_HANDLED;
@@ -152,7 +154,7 @@ static int hall_speed_init(void)
 		halls.gpio_irq = ret;
 
 	ret = request_irq(halls.gpio_irq, gpio_isr, IRQF_TRIGGER_FALLING |
-		IRQF_TRIGGER_RISING | IRQF_DISABLED, "hall.do", NULL);
+		IRQF_TRIGGER_RISING | IRQF_DISABLED, "hall.do", &halls);
 	if(ret) {
 		printk(KERN_ERR DRIVER_PREFIX "failed to request IRQ, ret "
 			"%d\n", ret);
