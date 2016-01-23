@@ -140,7 +140,7 @@ static int check_params(void)
 	return 0;
 }
 
-static int __init hall_speed_init(void)
+static int __init halls_init(void)
 {
 	int ret;
 
@@ -214,7 +214,7 @@ fail_gpio_req:
 	return -1;
 }
  
-static void __exit hall_speed_exit(void)
+static void __exit halls_exit(void)
 {
 	del_timer(&halls.stop_timer);
 	free_irq(halls.do_gpio_irq, &halls);
@@ -222,8 +222,8 @@ static void __exit hall_speed_exit(void)
 	class_unregister(&halls.class);
 }
  
-module_init(hall_speed_init);
-module_exit(hall_speed_exit);
+module_init(halls_init);
+module_exit(halls_exit);
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Bogdan Bogush");
