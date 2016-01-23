@@ -37,6 +37,7 @@ MODULE_PARM_DESC(hall_do_gpio_num, "GPIO number to which Hall sensor digital "
 	"output is connected");
 
 struct halls {
+	uint do_gpio_num;
 	int gpio_irq;
 	ktime_t t1, t2;
 	unsigned int stop_time;
@@ -80,7 +81,7 @@ static irqreturn_t halls_do_isr(int irq, void *data)
 	struct halls *hs = data;
 
 	/* When magnet goes past sensor the last one sets its DO to 0 */	
-	if (!gpio_get_value(hall_do_gpio_num)) {
+	if (!gpio_get_value(hs->do_gpio_num)) {
 		hs->t1 = hs->t2;
 		hs->t2 = ktime_get();
 
@@ -131,21 +132,22 @@ static int hall_speed_init(void)
 	if (class_register(&halls.class) < 0)
 		return -1;
 
-	ret = gpio_request(hall_do_gpio_num, "HALL_DO");
+	halls.do_gpio_num = hall_do_gpio_num;
+	ret = gpio_request(halls.do_gpio_num, "HALL_DO");
 	if (ret) {
 		printk(KERN_ERR DRIVER_PREFIX "failed to request GPIO, ret"
 			" %d\n", ret);
 		goto fail_gpio_req;
 	}
 
-	ret = gpio_direction_input(hall_do_gpio_num);
+	ret = gpio_direction_input(halls.do_gpio_num);
 	if (ret) {
 		printk(KERN_ERR DRIVER_PREFIX "failed to set GPIO "
 			"direction, ret %d\n", ret);
 		goto fail_gpio_setup;
 	}
 
-	ret = gpio_to_irq(hall_do_gpio_num);
+	ret = gpio_to_irq(halls.do_gpio_num);
 	if (ret < 0) {
 		printk(KERN_ERR DRIVER_PREFIX "failed to get GPIO IRQ, "
 			" %d\n", ret);
@@ -182,7 +184,7 @@ static int hall_speed_init(void)
 fail_timer_setup:
 	free_irq(halls.gpio_irq, NULL);
 fail_gpio_setup:
-	gpio_free(hall_do_gpio_num);
+	gpio_free(halls.do_gpio_num);
 fail_gpio_req:
 	class_unregister(&halls.class);
 	return -1;
@@ -192,7 +194,7 @@ static void hall_speed_exit(void)
 {
 	del_timer(&halls.stop_timer);
 	free_irq(halls.gpio_irq, NULL);
-	gpio_free(hall_do_gpio_num);
+	gpio_free(halls.do_gpio_num);
 	class_unregister(&halls.class);
 }
  
