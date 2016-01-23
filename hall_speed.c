@@ -75,7 +75,7 @@ static struct class_attribute halls_class_attrs[] = {
 };
 
 /* Interrupt handler on HALL DO signal */
-static irqreturn_t gpio_isr(int irq, void *data)
+static irqreturn_t halls_do_isr(int irq, void *data)
 {
 	struct halls *hs = data;
 
@@ -153,7 +153,7 @@ static int hall_speed_init(void)
 	} else
 		halls.gpio_irq = ret;
 
-	ret = request_irq(halls.gpio_irq, gpio_isr, IRQF_TRIGGER_FALLING |
+	ret = request_irq(halls.gpio_irq, halls_do_isr, IRQF_TRIGGER_FALLING |
 		IRQF_TRIGGER_RISING | IRQF_DISABLED, "hall.do", &halls);
 	if(ret) {
 		printk(KERN_ERR DRIVER_PREFIX "failed to request IRQ, ret "
