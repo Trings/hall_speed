@@ -51,6 +51,12 @@ struct halls {
 };
 
 static struct halls halls;
+
+static inline u32 get_speed(u32 t_diff)
+{
+	return PI * wheel_diameter * USEC_PER_SEC / PI_COEFFICIENT /
+		magnet_number / t_diff;
+}
  
 static ssize_t speed_value_read(struct class *class, char *buf)
 {
@@ -66,10 +72,8 @@ static ssize_t speed_value_read(struct class *class, char *buf)
 
 	spin_unlock_irqrestore(hs->lock, flags);
 
-	if (t_diff) {
-		speed = PI * wheel_diameter * USEC_PER_SEC / PI_COEFFICIENT /
-			magnet_number / t_diff;
-	}
+	if (t_diff)
+		speed = get_speed(t_diff);
 
 	return sprintf(buf, "%d\n", speed);
 }
