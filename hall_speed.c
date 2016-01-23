@@ -14,7 +14,7 @@
 #define MIN_SPEED 5
 
 /* Change this line to use different GPIO */
-#define HALL_DO_GPIO_NUM 40 /* J11.9 -   PA8 */
+#define HALL_DO_GPIO_NUM 40 /* J11.9 - PA8 */
 
 #define PI 314
 #define PI_COEFFICIENT 100
