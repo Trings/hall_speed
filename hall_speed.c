@@ -47,8 +47,7 @@ struct halls {
 
 static struct halls halls;
  
-/* Read from /sys/class/hall_speed/value */
-static ssize_t hall_speed_value_read(struct class *class, char *buf)
+static ssize_t speed_value_read(struct class *class, char *buf)
 {
 	unsigned long flags;
 	u32 t_diff;
@@ -70,9 +69,8 @@ static ssize_t hall_speed_value_read(struct class *class, char *buf)
 	return sprintf(buf, "%d\n", speed);
 }
 
-/* Sysfs definitions for hall speed class */
-static struct class_attribute hall_speed_class_attrs[] = {
-	__ATTR(value, S_IRUGO | S_IWUSR, hall_speed_value_read, NULL),
+static struct class_attribute halls_class_attrs[] = {
+	__ATTR(value, S_IRUGO | S_IWUSR, speed_value_read, NULL),
 	__ATTR_NULL,
 };
 
@@ -125,9 +123,9 @@ static int hall_speed_init(void)
 
 	spin_lock_init(&halls.lock);
 
-	halls.class.name = "hall_speed";
+	halls.class.name = DRIVER_NAME;
 	halls.class.owner = THIS_MODULE;
-	halls.class.class_attrs = hall_speed_class_attrs;
+	halls.class.class_attrs = halls_class_attrs;
 	if (class_register(&halls.class) < 0)
 		return -1;
 
