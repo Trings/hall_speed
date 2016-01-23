@@ -15,6 +15,7 @@
 
 /* Change this line to use different GPIO */
 #define HALL_DO_GPIO_NUM 40 /* J11.9 - PA8 */
+#define HALL_DO_GPIO_NAME "halls_do"
 
 #define PI 314
 #define PI_COEFFICIENT 100
@@ -133,7 +134,7 @@ static int hall_speed_init(void)
 		return -1;
 
 	halls.do_gpio_num = hall_do_gpio_num;
-	ret = gpio_request(halls.do_gpio_num, "HALL_DO");
+	ret = gpio_request(halls.do_gpio_num, HALL_DO_GPIO_NAME);
 	if (ret) {
 		printk(KERN_ERR DRIVER_PREFIX "failed to request GPIO, ret"
 			" %d\n", ret);
@@ -157,7 +158,7 @@ static int hall_speed_init(void)
 
 	ret = request_irq(halls.do_gpio_irq, halls_do_isr,
 		IRQF_TRIGGER_FALLING | IRQF_TRIGGER_RISING | IRQF_DISABLED,
-		"hall.do", &halls);
+		HALL_DO_GPIO_NAME, &halls);
 	if(ret) {
 		printk(KERN_ERR DRIVER_PREFIX "failed to request IRQ, ret "
 			"%d\n", ret);
