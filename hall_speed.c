@@ -185,7 +185,7 @@ static int hall_speed_init(void)
 	return 0;
 
 fail_timer_setup:
-	free_irq(halls.do_gpio_irq, NULL);
+	free_irq(halls.do_gpio_irq, &halls);
 fail_gpio_setup:
 	gpio_free(halls.do_gpio_num);
 fail_gpio_req:
@@ -196,7 +196,7 @@ fail_gpio_req:
 static void hall_speed_exit(void)
 {
 	del_timer(&halls.stop_timer);
-	free_irq(halls.do_gpio_irq, NULL);
+	free_irq(halls.do_gpio_irq, &halls);
 	gpio_free(halls.do_gpio_num);
 	class_unregister(&halls.class);
 }
