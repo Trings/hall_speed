@@ -117,10 +117,8 @@ void stop_timer_callback(unsigned long data)
 	spin_unlock_irqrestore(&hs->lock, flags);
 }
 
-static int hall_speed_init(void)
+static int check_params(void)
 {
-	int ret;
-
 	if (!wheel_diameter) {
 		printk(KERN_ERR DRIVER_PREFIX "wrong value of wheel "
 			"diameter\n");
@@ -138,6 +136,16 @@ static int hall_speed_init(void)
 			"speed \n");
 		return -1;
 	}
+
+	return 0;
+}
+
+static int hall_speed_init(void)
+{
+	int ret;
+
+	if (check_params())
+		return -1;
 
 	spin_lock_init(&halls.lock);
 
