@@ -6,9 +6,14 @@
 #include <linux/device.h>
 #include <linux/interrupt.h>
 #include <linux/version.h>
+#include <linux/fs.h>
+#include <linux/cdev.h>
 
 #define DRIVER_NAME "halls"
 #define DRIVER_PREFIX DRIVER_NAME ": "
+
+#define HALLS_MINOR 0
+#define HALLS_MAX_DEVICES 1
 
 #define WHEEL_DIAMETER 6
 #define MAGNET_NUMBER 2
@@ -48,6 +53,8 @@ struct halls {
 	unsigned int stop_time;
 	struct timer_list stop_timer;
 	struct class class;
+	int major;
+	struct cdev cdev;
 	spinlock_t lock;
 };
 
@@ -123,6 +130,10 @@ void stop_timer_callback(unsigned long data)
 	spin_unlock_irqrestore(&hs->lock, flags);
 }
 
+static struct file_operations halls_fops = {
+	.owner = THIS_MODULE,
+};
+
 static int check_params(void)
 {
 	if (!wheel_diameter) {
@@ -148,10 +159,28 @@ static int check_params(void)
 
 static int __init halls_init(void)
 {
-	int ret;
+	dev_t dev;
+	int ret = -1;
 
 	if (check_params())
 		return -1;
+	
+	ret = alloc_chrdev_region(&dev, HALLS_MINOR, HALLS_MAX_DEVICES,
+		DRIVER_NAME);
+	if (ret < 0) {
+		printk(KERN_ERR DRIVER_PREFIX "failed to alloc major number, "
+			"ret %d\n", ret);
+		return ret;
+	}
+	halls.major = MAJOR(dev);
+	cdev_init(&halls.cdev, &halls_fops);
+	halls.cdev.owner = THIS_MODULE;
+	ret = cdev_add(&halls.cdev, dev, HALLS_MAX_DEVICES);
+	if (ret) {
+		printk(KERN_ERR DRIVER_PREFIX "failed to add char device, "
+			"ret %d\n", ret);
+		goto fail_cdev_add;
+	}
 
 	spin_lock_init(&halls.lock);
 
@@ -159,7 +188,7 @@ static int __init halls_init(void)
 	halls.class.owner = THIS_MODULE;
 	halls.class.class_attrs = halls_class_attrs;
 	if (class_register(&halls.class) < 0)
-		return -1;
+		goto fail_class_register;
 
 	halls.do_gpio_num = hall_do_gpio_num;
 	ret = gpio_request(halls.do_gpio_num, HALL_DO_GPIO_NAME);
@@ -220,7 +249,11 @@ fail_gpio_setup:
 	gpio_free(halls.do_gpio_num);
 fail_gpio_req:
 	class_unregister(&halls.class);
-	return -1;
+fail_class_register:
+	cdev_del(&halls.cdev);
+fail_cdev_add:
+	unregister_chrdev_region(dev, HALLS_MAX_DEVICES);
+	return ret;
 }
 
 static void __exit halls_exit(void)
@@ -229,6 +262,9 @@ static void __exit halls_exit(void)
 	free_irq(halls.do_gpio_irq, &halls);
 	gpio_free(halls.do_gpio_num);
 	class_unregister(&halls.class);
+	cdev_del(&halls.cdev);
+	unregister_chrdev_region(MKDEV(halls.major, HALLS_MINOR),
+		HALLS_MAX_DEVICES);
 }
 
 module_init(halls_init);
