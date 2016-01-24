@@ -5,6 +5,7 @@
 #include <linux/ktime.h>
 #include <linux/device.h>
 #include <linux/interrupt.h>
+#include <linux/version.h>
 
 #define DRIVER_NAME "halls"
 #define DRIVER_PREFIX DRIVER_NAME ": "
@@ -64,7 +65,12 @@ static inline u32 get_stop_detection_time(u32 min_speed)
 		magnet_number /	min_speed;
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 34)
 static ssize_t speed_value_read(struct class *class, char *buf)
+#else
+static ssize_t speed_value_read(struct class *class,
+	struct class_attribute *attr, char *buf)
+#endif
 {
 	unsigned long flags;
 	u32 t_diff;
@@ -179,7 +185,10 @@ static int __init halls_init(void)
 		halls.do_gpio_irq = ret;
 
 	ret = request_irq(halls.do_gpio_irq, halls_do_isr,
-		IRQF_TRIGGER_FALLING | IRQF_TRIGGER_RISING | IRQF_DISABLED,
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 1, 0)
+		IRQF_DISABLED |
+#endif
+		IRQF_TRIGGER_FALLING | IRQF_TRIGGER_RISING,
 		HALL_DO_GPIO_NAME, &halls);
 	if (ret) {
 		printk(KERN_ERR DRIVER_PREFIX "failed to request IRQ, ret "
