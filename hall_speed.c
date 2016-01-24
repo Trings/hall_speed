@@ -4,7 +4,7 @@
 #include <linux/kernel.h>
 #include <linux/ktime.h>
 #include <linux/device.h>
-#include <linux/interrupt.h> 
+#include <linux/interrupt.h>
 
 #define DRIVER_NAME "halls"
 #define DRIVER_PREFIX DRIVER_NAME ": "
@@ -63,7 +63,7 @@ static inline u32 get_stop_detection_time(u32 min_speed)
 	return PI * MSEC_PER_SEC * wheel_diameter / PI_COEFFICIENT /
 		magnet_number /	min_speed;
 }
- 
+
 static ssize_t speed_value_read(struct class *class, char *buf)
 {
 	unsigned long flags;
@@ -94,7 +94,7 @@ static irqreturn_t halls_do_isr(int irq, void *data)
 {
 	struct halls *hs = data;
 
-	/* When magnet goes past sensor the last one sets its DO to 0 */	
+	/* When magnet goes past sensor the last one sets its DO to 0 */
 	if (!gpio_get_value(hs->do_gpio_num)) {
 		hs->t1 = hs->t2;
 		hs->t2 = ktime_get();
@@ -133,7 +133,7 @@ static int check_params(void)
 
 	if (!min_speed) {
 		printk(KERN_ERR DRIVER_PREFIX "wrong value of minimum "
-			"speed \n");
+			"speed\n");
 		return -1;
 	}
 
@@ -181,7 +181,7 @@ static int __init halls_init(void)
 	ret = request_irq(halls.do_gpio_irq, halls_do_isr,
 		IRQF_TRIGGER_FALLING | IRQF_TRIGGER_RISING | IRQF_DISABLED,
 		HALL_DO_GPIO_NAME, &halls);
-	if(ret) {
+	if (ret) {
 		printk(KERN_ERR DRIVER_PREFIX "failed to request IRQ, ret "
 			"%d\n", ret);
 		goto fail_gpio_setup;
@@ -213,7 +213,7 @@ fail_gpio_req:
 	class_unregister(&halls.class);
 	return -1;
 }
- 
+
 static void __exit halls_exit(void)
 {
 	del_timer(&halls.stop_timer);
@@ -221,7 +221,7 @@ static void __exit halls_exit(void)
 	gpio_free(halls.do_gpio_num);
 	class_unregister(&halls.class);
 }
- 
+
 module_init(halls_init);
 module_exit(halls_exit);
 
