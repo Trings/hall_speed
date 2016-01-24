@@ -29,6 +29,8 @@
 #define PI 314
 #define PI_COEFFICIENT 100
 
+#define SPEED_STR_BUFF_SIZE 12
+
 static uint wheel_diameter = WHEEL_DIAMETER;
 module_param(wheel_diameter, uint, S_IRUGO);
 MODULE_PARM_DESC(wheel_diameter, "Wheel diameter in cm");
@@ -60,10 +62,20 @@ struct halls {
 
 static struct halls halls;
 
-static inline u32 get_speed(u32 t_diff)
+static inline u32 get_speed(struct halls *hs)
 {
-	return PI * wheel_diameter * USEC_PER_SEC / PI_COEFFICIENT /
-		magnet_number / t_diff;
+	u32 t_diff;
+	unsigned long flags;
+
+	spin_lock_irqsave(&hs->lock, flags);
+
+	t_diff = ktime_to_ns(hs->t1) && ktime_to_ns(hs->t2) ?
+		ktime_to_us(ktime_sub(hs->t2, hs->t1)) : 0;
+
+	spin_unlock_irqrestore(&hs->lock, flags);
+
+	return t_diff ? PI * wheel_diameter * USEC_PER_SEC / PI_COEFFICIENT /
+		magnet_number / t_diff : 0;
 }
 
 static inline u32 get_stop_detection_time(u32 min_speed)
@@ -79,22 +91,9 @@ static ssize_t speed_value_read(struct class *class,
 	struct class_attribute *attr, char *buf)
 #endif
 {
-	unsigned long flags;
-	u32 t_diff;
-	u32 speed = 0;
 	struct halls *hs = container_of(class, struct halls, class);
 
-	spin_lock_irqsave(&hs->lock, flags);
-
-	t_diff = ktime_to_ns(hs->t1) && ktime_to_ns(hs->t2) ?
-		ktime_to_us(ktime_sub(hs->t2, hs->t1)) : 0;
-
-	spin_unlock_irqrestore(&hs->lock, flags);
-
-	if (t_diff)
-		speed = get_speed(t_diff);
-
-	return sprintf(buf, "%d\n", speed);
+	return sprintf(buf, "%d\n", get_speed(hs));
 }
 
 static struct class_attribute halls_class_attrs[] = {
@@ -130,8 +129,40 @@ void stop_timer_callback(unsigned long data)
 	spin_unlock_irqrestore(&hs->lock, flags);
 }
 
+static int halls_open(struct inode *inode, struct file *filp)
+{
+	struct halls *hs = container_of(inode->i_cdev, struct halls, cdev);
+
+	filp->private_data = hs;
+
+	return 0;
+}
+
+static int halls_release(struct inode *inode, struct file *filp)
+{
+	return 0;
+}
+
+static ssize_t halls_read(struct file *filp, char __user *buf, size_t count,
+	loff_t *f_pos)
+{
+	size_t max_len;
+	char speed_str[SPEED_STR_BUFF_SIZE];
+	struct halls *hs = filp->private_data;
+
+	max_len = snprintf(speed_str, SPEED_STR_BUFF_SIZE, "%u\n",
+		get_speed(hs));
+	if (max_len > SPEED_STR_BUFF_SIZE)
+		max_len = SPEED_STR_BUFF_SIZE;
+
+	return simple_read_from_buffer(buf, count, f_pos, speed_str, max_len);
+}
+
 static struct file_operations halls_fops = {
-	.owner = THIS_MODULE,
+	.owner   = THIS_MODULE,
+	.open    = halls_open,
+	.release = halls_release,
+	.read    = halls_read,
 };
 
 static int check_params(void)
