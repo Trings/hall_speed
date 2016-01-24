@@ -71,12 +71,12 @@ static ssize_t speed_value_read(struct class *class, char *buf)
 	u32 speed = 0;
 	struct halls *hs = container_of(class, struct halls, class);
 
-	spin_lock_irqsave(hs->lock, flags);
+	spin_lock_irqsave(&hs->lock, flags);
 
 	t_diff = ktime_to_ns(hs->t1) && ktime_to_ns(hs->t2) ?
 		ktime_to_us(ktime_sub(hs->t2, hs->t1)) : 0;
 
-	spin_unlock_irqrestore(hs->lock, flags);
+	spin_unlock_irqrestore(&hs->lock, flags);
 
 	if (t_diff)
 		speed = get_speed(t_diff);
