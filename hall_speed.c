@@ -24,19 +24,19 @@
 #define PI_COEFFICIENT 100
 
 static uint wheel_diameter = WHEEL_DIAMETER;
-module_param(wheel_diameter, uint, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
+module_param(wheel_diameter, uint, S_IRUGO);
 MODULE_PARM_DESC(wheel_diameter, "Wheel diameter in cm");
 
 static uint magnet_number = MAGNET_NUMBER;
-module_param(magnet_number, uint, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
+module_param(magnet_number, uint, S_IRUGO);
 MODULE_PARM_DESC(magnet_number, "Number of magnets on wheel");
 
 static uint min_speed = MIN_SPEED;
-module_param(min_speed, uint, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
+module_param(min_speed, uint, S_IRUGO);
 MODULE_PARM_DESC(min_speed, "Minimun speed in cm/s");
 
 static uint hall_do_gpio_num = HALL_DO_GPIO_NUM;
-module_param(hall_do_gpio_num, uint, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
+module_param(hall_do_gpio_num, uint, S_IRUGO);
 MODULE_PARM_DESC(hall_do_gpio_num, "GPIO number to which Hall sensor digital "
 	"output is connected");
 
