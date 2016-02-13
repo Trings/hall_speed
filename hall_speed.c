@@ -189,7 +189,7 @@ static int check_params(void)
 	return 0;
 }
 
-static int char_dev_create(void)
+static int halls_char_dev_create(void)
 {
 	dev_t dev;
 	int ret;
@@ -215,7 +215,7 @@ static int char_dev_create(void)
 	return 0;
 }
 
-static void char_dev_destroy(void)
+static void halls_char_dev_destroy(void)
 {
 	cdev_del(&halls.cdev);
 	unregister_chrdev_region(MKDEV(halls.major, HALLS_MINOR),
@@ -260,7 +260,7 @@ static int __init halls_init(void)
 	if (check_params())
 		return -1;
 
-	if ((ret = char_dev_create()))
+	if ((ret = halls_char_dev_create()))
 		return ret;
 
 	spin_lock_init(&halls.lock);
@@ -328,7 +328,7 @@ fail_gpio_setup:
 fail_gpio_req:
 	halls_sysfs_destroy();
 fail_sysfs_create:
-	char_dev_destroy();
+	halls_char_dev_destroy();
 	return ret;
 }
 
@@ -338,7 +338,7 @@ static void __exit halls_exit(void)
 	free_irq(halls.do_gpio_irq, &halls);
 	gpio_free(halls.do_gpio_num);
 	halls_sysfs_destroy();
-	char_dev_destroy();
+	halls_char_dev_destroy();
 }
 
 module_init(halls_init);
