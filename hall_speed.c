@@ -169,20 +169,17 @@ static struct file_operations halls_fops = {
 static int halls_check_params(void)
 {
 	if (!wheel_diameter) {
-		printk(KERN_ERR DRIVER_PREFIX "wrong value of wheel "
-			"diameter\n");
+		pr_err(DRIVER_PREFIX "wrong value of wheel diameter\n");
 		return -1;
 	}
 
 	if (!magnet_number) {
-		printk(KERN_ERR DRIVER_PREFIX "wrong value of magnets "
-			"number\n");
+		pr_err(DRIVER_PREFIX "wrong value of magnets number\n");
 		return -1;
 	}
 
 	if (!min_speed) {
-		printk(KERN_ERR DRIVER_PREFIX "wrong value of minimum "
-			"speed\n");
+		pr_err(DRIVER_PREFIX "wrong value of minimum speed\n");
 		return -1;
 	}
 
@@ -197,8 +194,8 @@ static int halls_char_dev_create(void)
 	ret = alloc_chrdev_region(&dev, HALLS_MINOR, HALLS_MAX_DEVICES,
 		DRIVER_NAME);
 	if (ret < 0) {
-		printk(KERN_ERR DRIVER_PREFIX "failed to alloc major number, "
-			"ret %d\n", ret);
+		pr_err(DRIVER_PREFIX "failed to alloc major number, ret %d\n",
+			ret);
 		return ret;
 	}
 	halls.major = MAJOR(dev);
@@ -206,8 +203,8 @@ static int halls_char_dev_create(void)
 	halls.cdev.owner = THIS_MODULE;
 	ret = cdev_add(&halls.cdev, dev, HALLS_MAX_DEVICES);
 	if (ret) {
-		printk(KERN_ERR DRIVER_PREFIX "failed to add char device, "
-			"ret %d\n", ret);
+		pr_err(DRIVER_PREFIX "failed to add char device, ret %d\n",
+			ret);
 		unregister_chrdev_region(dev, HALLS_MAX_DEVICES);
 		return ret;
 	}
@@ -230,16 +227,15 @@ static int halls_sysfs_create(void)
 	halls.class.owner = THIS_MODULE;
 	halls.class.class_attrs = halls_class_attrs;
 	if ((ret = class_register(&halls.class))) {
-		printk(KERN_ERR DRIVER_PREFIX "failed to register class, "
-			"ret %d\n", ret);
+		pr_err(DRIVER_PREFIX "failed to register class, ret %d\n", ret);
 		return ret;
 	}
 
 	halls.sysfs_dev = device_create(&halls.class, NULL, MKDEV(halls.major,
 		HALLS_MINOR), NULL, DRIVER_NAME "%d", HALLS_MINOR);
 	if (IS_ERR(halls.sysfs_dev)) {
-		printk(KERN_ERR DRIVER_PREFIX "failed to create sysfs device, "
-			"ret %ld\n", PTR_ERR(halls.sysfs_dev));
+		pr_err(DRIVER_PREFIX "failed to create sysfs device, ret %ld\n",
+			PTR_ERR(halls.sysfs_dev));
 		class_unregister(&halls.class);
 		return PTR_ERR(halls.sysfs_dev);
 	}
@@ -260,22 +256,21 @@ static int halls_gpio_init(void)
 	halls.do_gpio_num = hall_do_gpio_num;
 	ret = gpio_request(halls.do_gpio_num, HALL_DO_GPIO_NAME);
 	if (ret) {
-		printk(KERN_ERR DRIVER_PREFIX "failed to request GPIO, ret"
-			" %d\n", ret);
+		dev_err(halls.sysfs_dev, "failed to request GPIO, ret %d\n",
+			ret);
 		return ret;
 	}
 
 	ret = gpio_direction_input(halls.do_gpio_num);
 	if (ret) {
-		printk(KERN_ERR DRIVER_PREFIX "failed to set GPIO "
-			"direction, ret %d\n", ret);
+		dev_err(halls.sysfs_dev,
+			"failed to set GPIO direction, ret %d\n", ret);
 		goto fail_gpio_setup;
 	}
 
 	ret = gpio_to_irq(halls.do_gpio_num);
 	if (ret < 0) {
-		printk(KERN_ERR DRIVER_PREFIX "failed to get GPIO IRQ, "
-			" %d\n", ret);
+		dev_err(halls.sysfs_dev, "failed to get GPIO IRQ, %d\n", ret);
 		goto fail_gpio_setup;
 	} else
 		halls.do_gpio_irq = ret;
@@ -287,8 +282,8 @@ static int halls_gpio_init(void)
 		IRQF_TRIGGER_FALLING | IRQF_TRIGGER_RISING,
 		HALL_DO_GPIO_NAME, &halls);
 	if (ret) {
-		printk(KERN_ERR DRIVER_PREFIX "failed to request IRQ, ret "
-			"%d\n", ret);
+		dev_err(halls.sysfs_dev, "failed to request IRQ, ret %d\n",
+			ret);
 		goto fail_gpio_setup;
 	}
 
@@ -320,8 +315,8 @@ static int halls_stop_timer_init(void)
 	ret = mod_timer(&halls.stop_timer, jiffies +
 		msecs_to_jiffies(halls.stop_time));
 	if (ret) {
-		printk(KERN_ERR DRIVER_PREFIX "failed to setup stop timer "
-			"%d\n", ret);
+		dev_err(halls.sysfs_dev, "failed to setup stop timer %d\n",
+			ret);
 		return ret;
 	}
 
