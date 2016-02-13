@@ -253,27 +253,16 @@ static void halls_sysfs_destroy(void)
 	class_unregister(&halls.class);
 }
 
-static int __init halls_init(void)
+static int halls_gpio_init(void)
 {
 	int ret;
-
-	if (check_params())
-		return -1;
-
-	if ((ret = halls_char_dev_create()))
-		return ret;
-
-	spin_lock_init(&halls.lock);
-
-	if ((ret = halls_sysfs_create()))
-		goto fail_sysfs_create;
 
 	halls.do_gpio_num = hall_do_gpio_num;
 	ret = gpio_request(halls.do_gpio_num, HALL_DO_GPIO_NAME);
 	if (ret) {
 		printk(KERN_ERR DRIVER_PREFIX "failed to request GPIO, ret"
 			" %d\n", ret);
-		goto fail_gpio_req;
+		return ret;
 	}
 
 	ret = gpio_direction_input(halls.do_gpio_num);
@@ -303,6 +292,37 @@ static int __init halls_init(void)
 		goto fail_gpio_setup;
 	}
 
+	return 0;
+
+fail_gpio_setup:
+	gpio_free(halls.do_gpio_num);
+	return ret;
+}
+
+static void halls_gpio_cleanup(void)
+{
+	free_irq(halls.do_gpio_irq, &halls);
+	gpio_free(halls.do_gpio_num);
+}
+
+static int __init halls_init(void)
+{
+	int ret;
+
+	if (check_params())
+		return -1;
+
+	if ((ret = halls_char_dev_create()))
+		return ret;
+
+	spin_lock_init(&halls.lock);
+
+	if ((ret = halls_sysfs_create()))
+		goto fail_sysfs_create;
+
+	if ((ret = halls_gpio_init()))
+		goto fail_gpio_init;
+
 	/* If there wasn't signal from hall sensor during stop_time then wheel
 	 * has been stopped and we need set speed value to 0. stop_time
 	 * is calculated from minimal speed parameter. The higher minimal speed,
@@ -322,10 +342,8 @@ static int __init halls_init(void)
 	return 0;
 
 fail_timer_setup:
-	free_irq(halls.do_gpio_irq, &halls);
-fail_gpio_setup:
-	gpio_free(halls.do_gpio_num);
-fail_gpio_req:
+	halls_gpio_cleanup();
+fail_gpio_init:
 	halls_sysfs_destroy();
 fail_sysfs_create:
 	halls_char_dev_destroy();
@@ -335,8 +353,7 @@ fail_sysfs_create:
 static void __exit halls_exit(void)
 {
 	del_timer(&halls.stop_timer);
-	free_irq(halls.do_gpio_irq, &halls);
-	gpio_free(halls.do_gpio_num);
+	halls_gpio_cleanup();
 	halls_sysfs_destroy();
 	halls_char_dev_destroy();
 }
