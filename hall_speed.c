@@ -166,7 +166,7 @@ static struct file_operations halls_fops = {
 	.read    = halls_read,
 };
 
-static int check_params(void)
+static int halls_check_params(void)
 {
 	if (!wheel_diameter) {
 		printk(KERN_ERR DRIVER_PREFIX "wrong value of wheel "
@@ -337,7 +337,7 @@ static int __init halls_init(void)
 {
 	int ret;
 
-	if (check_params())
+	if (halls_check_params())
 		return -1;
 
 	if ((ret = halls_char_dev_create()))
