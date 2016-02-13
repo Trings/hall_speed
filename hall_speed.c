@@ -45,8 +45,8 @@ MODULE_PARM_DESC(min_speed, "Minimun speed in cm/s");
 
 static uint hall_do_gpio_num = HALL_DO_GPIO_NUM;
 module_param(hall_do_gpio_num, uint, S_IRUGO);
-MODULE_PARM_DESC(hall_do_gpio_num, "GPIO number to which Hall sensor digital "
-	"output is connected");
+MODULE_PARM_DESC(hall_do_gpio_num,
+	"GPIO number to which Hall sensor digital output is connected");
 
 struct halls {
 	uint do_gpio_num;
@@ -159,7 +159,7 @@ static ssize_t halls_read(struct file *filp, char __user *buf, size_t count,
 	return simple_read_from_buffer(buf, count, f_pos, speed_str, max_len);
 }
 
-static struct file_operations halls_fops = {
+static const struct file_operations halls_fops = {
 	.owner   = THIS_MODULE,
 	.open    = halls_open,
 	.release = halls_release,
@@ -226,7 +226,8 @@ static int halls_sysfs_create(void)
 	halls.class.name = DRIVER_NAME;
 	halls.class.owner = THIS_MODULE;
 	halls.class.class_attrs = halls_class_attrs;
-	if ((ret = class_register(&halls.class))) {
+	ret = class_register(&halls.class);
+	if (ret) {
 		pr_err(DRIVER_PREFIX "failed to register class, ret %d\n", ret);
 		return ret;
 	}
@@ -335,18 +336,22 @@ static int __init halls_init(void)
 	if (halls_check_params())
 		return -1;
 
-	if ((ret = halls_char_dev_create()))
+	ret = halls_char_dev_create();
+	if (ret)
 		return ret;
 
 	spin_lock_init(&halls.lock);
 
-	if ((ret = halls_sysfs_create()))
+	ret = halls_sysfs_create();
+	if (ret)
 		goto fail_sysfs_create;
 
-	if ((ret = halls_gpio_init()))
+	ret = halls_gpio_init();
+	if (ret)
 		goto fail_gpio_init;
 
-	if ((ret = halls_stop_timer_init()))
+	ret = halls_stop_timer_init();
+	if (ret)
 		goto fail_timer_init;
 
 	return 0;
