@@ -222,6 +222,37 @@ static void char_dev_destroy(void)
 		HALLS_MAX_DEVICES);
 }
 
+static int halls_sysfs_create(void)
+{
+	int ret;
+
+	halls.class.name = DRIVER_NAME;
+	halls.class.owner = THIS_MODULE;
+	halls.class.class_attrs = halls_class_attrs;
+	if ((ret = class_register(&halls.class))) {
+		printk(KERN_ERR DRIVER_PREFIX "failed to register class, "
+			"ret %d\n", ret);
+		return ret;
+	}
+
+	halls.sysfs_dev = device_create(&halls.class, NULL, MKDEV(halls.major,
+		HALLS_MINOR), NULL, DRIVER_NAME "%d", HALLS_MINOR);
+	if (IS_ERR(halls.sysfs_dev)) {
+		printk(KERN_ERR DRIVER_PREFIX "failed to create sysfs device, "
+			"ret %ld\n", PTR_ERR(halls.sysfs_dev));
+		class_unregister(&halls.class);
+		return PTR_ERR(halls.sysfs_dev);
+	}
+
+	return 0;
+}
+
+static void halls_sysfs_destroy(void)
+{
+	device_destroy(&halls.class, MKDEV(halls.major, HALLS_MINOR));
+	class_unregister(&halls.class);
+}
+
 static int __init halls_init(void)
 {
 	int ret;
@@ -234,16 +265,8 @@ static int __init halls_init(void)
 
 	spin_lock_init(&halls.lock);
 
-	halls.class.name = DRIVER_NAME;
-	halls.class.owner = THIS_MODULE;
-	halls.class.class_attrs = halls_class_attrs;
-	if (class_register(&halls.class) < 0)
-		goto fail_class_register;
-
-	halls.sysfs_dev = device_create(&halls.class, NULL, MKDEV(halls.major,
-		HALLS_MINOR), NULL, DRIVER_NAME "%d", HALLS_MINOR);
-	if (IS_ERR(halls.sysfs_dev))
-		goto fail_sysfs_dev_register;
+	if ((ret = halls_sysfs_create()))
+		goto fail_sysfs_create;
 
 	halls.do_gpio_num = hall_do_gpio_num;
 	ret = gpio_request(halls.do_gpio_num, HALL_DO_GPIO_NAME);
@@ -303,10 +326,8 @@ fail_timer_setup:
 fail_gpio_setup:
 	gpio_free(halls.do_gpio_num);
 fail_gpio_req:
-	device_destroy(&halls.class, MKDEV(halls.major, HALLS_MINOR));
-fail_sysfs_dev_register:
-	class_unregister(&halls.class);
-fail_class_register:
+	halls_sysfs_destroy();
+fail_sysfs_create:
 	char_dev_destroy();
 	return ret;
 }
@@ -316,8 +337,7 @@ static void __exit halls_exit(void)
 	del_timer(&halls.stop_timer);
 	free_irq(halls.do_gpio_irq, &halls);
 	gpio_free(halls.do_gpio_num);
-	device_destroy(&halls.class, MKDEV(halls.major, HALLS_MINOR));
-	class_unregister(&halls.class);
+	halls_sysfs_destroy();
 	char_dev_destroy();
 }
 
