@@ -305,6 +305,34 @@ static void halls_gpio_cleanup(void)
 	gpio_free(halls.do_gpio_num);
 }
 
+static int halls_stop_timer_init(void)
+{
+	int ret;
+
+	/* If there wasn't signal from hall sensor during stop_time then wheel
+	 * has been stopped and we need set speed value to 0. stop_time
+	 * is calculated from minimal speed parameter. The higher minimal speed,
+	 * the lower stop detection time.
+	 */
+	halls.stop_time = get_stop_detection_time(min_speed);
+	setup_timer(&halls.stop_timer, stop_timer_callback,
+		(unsigned long)&halls);
+	ret = mod_timer(&halls.stop_timer, jiffies +
+		msecs_to_jiffies(halls.stop_time));
+	if (ret) {
+		printk(KERN_ERR DRIVER_PREFIX "failed to setup stop timer "
+			"%d\n", ret);
+		return ret;
+	}
+
+	return 0;
+}
+
+static void halls_stop_timer_cleanup(void)
+{
+	del_timer(&halls.stop_timer);
+}
+
 static int __init halls_init(void)
 {
 	int ret;
@@ -323,25 +351,12 @@ static int __init halls_init(void)
 	if ((ret = halls_gpio_init()))
 		goto fail_gpio_init;
 
-	/* If there wasn't signal from hall sensor during stop_time then wheel
-	 * has been stopped and we need set speed value to 0. stop_time
-	 * is calculated from minimal speed parameter. The higher minimal speed,
-	 * the lower stop detection time.
-	 */
-	halls.stop_time = get_stop_detection_time(min_speed);
-	setup_timer(&halls.stop_timer, stop_timer_callback,
-		(unsigned long)&halls);
-	ret = mod_timer(&halls.stop_timer, jiffies +
-		msecs_to_jiffies(halls.stop_time));
-	if (ret) {
-		printk(KERN_ERR DRIVER_PREFIX "failed to setup stop timer "
-			"%d\n", ret);
-		goto fail_timer_setup;
-	}
+	if ((ret = halls_stop_timer_init()))
+		goto fail_timer_init;
 
 	return 0;
 
-fail_timer_setup:
+fail_timer_init:
 	halls_gpio_cleanup();
 fail_gpio_init:
 	halls_sysfs_destroy();
@@ -352,7 +367,7 @@ fail_sysfs_create:
 
 static void __exit halls_exit(void)
 {
-	del_timer(&halls.stop_timer);
+	halls_stop_timer_cleanup();
 	halls_gpio_cleanup();
 	halls_sysfs_destroy();
 	halls_char_dev_destroy();
