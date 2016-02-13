@@ -55,6 +55,7 @@ struct halls {
 	unsigned int stop_time;
 	struct timer_list stop_timer;
 	struct class class;
+	struct device *sysfs_dev;
 	int major;
 	struct cdev cdev;
 	spinlock_t lock;
@@ -221,6 +222,11 @@ static int __init halls_init(void)
 	if (class_register(&halls.class) < 0)
 		goto fail_class_register;
 
+	halls.sysfs_dev = device_create(&halls.class, NULL, dev, NULL,
+		DRIVER_NAME "%d", HALLS_MINOR);
+	if (IS_ERR(halls.sysfs_dev))
+		goto fail_sysfs_dev_register;
+
 	halls.do_gpio_num = hall_do_gpio_num;
 	ret = gpio_request(halls.do_gpio_num, HALL_DO_GPIO_NAME);
 	if (ret) {
@@ -279,6 +285,8 @@ fail_timer_setup:
 fail_gpio_setup:
 	gpio_free(halls.do_gpio_num);
 fail_gpio_req:
+	device_destroy(&halls.class, MKDEV(halls.major, HALLS_MINOR));
+fail_sysfs_dev_register:
 	class_unregister(&halls.class);
 fail_class_register:
 	cdev_del(&halls.cdev);
@@ -292,6 +300,7 @@ static void __exit halls_exit(void)
 	del_timer(&halls.stop_timer);
 	free_irq(halls.do_gpio_irq, &halls);
 	gpio_free(halls.do_gpio_num);
+	device_destroy(&halls.class, MKDEV(halls.major, HALLS_MINOR));
 	class_unregister(&halls.class);
 	cdev_del(&halls.cdev);
 	unregister_chrdev_region(MKDEV(halls.major, HALLS_MINOR),
