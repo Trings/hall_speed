@@ -189,14 +189,11 @@ static int check_params(void)
 	return 0;
 }
 
-static int __init halls_init(void)
+static int char_dev_create(void)
 {
 	dev_t dev;
-	int ret = -1;
+	int ret;
 
-	if (check_params())
-		return -1;
-	
 	ret = alloc_chrdev_region(&dev, HALLS_MINOR, HALLS_MAX_DEVICES,
 		DRIVER_NAME);
 	if (ret < 0) {
@@ -211,8 +208,29 @@ static int __init halls_init(void)
 	if (ret) {
 		printk(KERN_ERR DRIVER_PREFIX "failed to add char device, "
 			"ret %d\n", ret);
-		goto fail_cdev_add;
+		unregister_chrdev_region(dev, HALLS_MAX_DEVICES);
+		return ret;
 	}
+
+	return 0;
+}
+
+static void char_dev_destroy(void)
+{
+	cdev_del(&halls.cdev);
+	unregister_chrdev_region(MKDEV(halls.major, HALLS_MINOR),
+		HALLS_MAX_DEVICES);
+}
+
+static int __init halls_init(void)
+{
+	int ret;
+
+	if (check_params())
+		return -1;
+
+	if ((ret = char_dev_create()))
+		return ret;
 
 	spin_lock_init(&halls.lock);
 
@@ -222,8 +240,8 @@ static int __init halls_init(void)
 	if (class_register(&halls.class) < 0)
 		goto fail_class_register;
 
-	halls.sysfs_dev = device_create(&halls.class, NULL, dev, NULL,
-		DRIVER_NAME "%d", HALLS_MINOR);
+	halls.sysfs_dev = device_create(&halls.class, NULL, MKDEV(halls.major,
+		HALLS_MINOR), NULL, DRIVER_NAME "%d", HALLS_MINOR);
 	if (IS_ERR(halls.sysfs_dev))
 		goto fail_sysfs_dev_register;
 
@@ -289,9 +307,7 @@ fail_gpio_req:
 fail_sysfs_dev_register:
 	class_unregister(&halls.class);
 fail_class_register:
-	cdev_del(&halls.cdev);
-fail_cdev_add:
-	unregister_chrdev_region(dev, HALLS_MAX_DEVICES);
+	char_dev_destroy();
 	return ret;
 }
 
@@ -302,9 +318,7 @@ static void __exit halls_exit(void)
 	gpio_free(halls.do_gpio_num);
 	device_destroy(&halls.class, MKDEV(halls.major, HALLS_MINOR));
 	class_unregister(&halls.class);
-	cdev_del(&halls.cdev);
-	unregister_chrdev_region(MKDEV(halls.major, HALLS_MINOR),
-		HALLS_MAX_DEVICES);
+	char_dev_destroy();
 }
 
 module_init(halls_init);
