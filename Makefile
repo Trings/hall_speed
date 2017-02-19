@@ -8,6 +8,6 @@ default:
 	$(MAKE) -C $(KERNELDIR) M=$(PWD) modules
 
 clean:
-	rm -rf *.ko *.o .*.cmd *.mod.c *.order *.symvers .tmp_versions
+	$(MAKE) -C $(KERNELDIR) M=$(PWD) clean
 endif
 
